@@ -1,13 +1,13 @@
 Metadata-Version: 2.4
 Name: modexiaagentpay
-Version: 0.1.0
+Version: 0.2.0
 Summary: Modexia AgentPay — Python SDK for agent wallets & payments (USDC)
 Author-email: Modaniels <modaniels@modexia.software>
 License-Expression: MIT
-Project-URL: Homepage, https://github.com/Modexia/ModexiaAgentpay
-Project-URL: Repository, https://github.com/Modexia/ModexiaAgentpay
-Project-URL: Documentation, https://github.com/Modexia/ModexiaAgentpay#readme
-Project-URL: Changelog, https://github.com/Modexia/ModexiaAgentpay/releases
+Project-URL: Homepage, https://github.com/Modaniel/SDKs
+Project-URL: Repository, https://github.com/Modaniel/SDKs
+Project-URL: Documentation, https://github.com/Modaniel/SDKs/docs
+Project-URL: Changelog, https://github.com/Modaniel/SDKs/releases
 Keywords: modexia,agentpay,sdk,payments,usdc
 Classifier: Development Status :: 4 - Beta
 Classifier: Intended Audience :: Developers
@@ -27,6 +27,7 @@ Provides-Extra: dev
 Requires-Dist: pytest>=7.0; extra == "dev"
 Requires-Dist: build; extra == "dev"
 Requires-Dist: twine; extra == "dev"
+Requires-Dist: requests-mock; extra == "dev"
 Dynamic: license-file
 
 # Modexia Python SDK

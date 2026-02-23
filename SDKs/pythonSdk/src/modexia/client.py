@@ -47,7 +47,7 @@ class ModexiaClient:
         session: configured `requests.Session` with retry logic.
     """
 
-    VERSION = "0.1.0"
+    VERSION = "0.2.0"
     DEFAULT_TIMEOUT = 15
 
     URLS = {
@@ -56,12 +56,14 @@ class ModexiaClient:
         "local": "http://localhost:3000"
     }
 
-    def __init__(self, api_key: str, timeout: int = DEFAULT_TIMEOUT):
+    def __init__(self, api_key: str, timeout: int = DEFAULT_TIMEOUT, base_url: Optional[str]=None, validate: bool = True):
         """Create a new `ModexiaClient`.
 
         Args:
             api_key: Modexia API key (mx_test_... or mx_live_...)
             timeout: per-request timeout in seconds.
+            base_url: Optional override for the API URL.
+            validate: If True, validate session with the backend during initialization.
 
         Raises:
             ModexiaAuthError: if initial handshake (/user/me) fails.
@@ -71,11 +73,19 @@ class ModexiaClient:
         self.api_key = api_key
         self.timeout = timeout
 
-        # determine environment from key (simple heuristic)
-        if api_key.startswith("mx_live_"):
+        # determine environment from override, env, or key
+        if base_url:
+            self.base_url = base_url
+        elif os.environ.get("MODEXIA_BASE_URL"):
+            self.base_url = os.environ.get("MODEXIA_BASE_URL")
+        elif api_key.startswith("mx_live_"):
             self.base_url = self.URLS["live"]
+        elif api_key.startswith("mx_test_"):
+            self.base_url = self.URLS["test"]
         else:
             self.base_url = self.URLS["local"]
+        
+        logger.info(f"Resolved base_url to {self.base_url}")
 
         # HTTP session w/ sensible headers and retry policy
         self.session = requests.Session()
@@ -90,7 +100,9 @@ class ModexiaClient:
         self.session.mount('https://', HTTPAdapter(max_retries=retries))
 
         # Handshake: validate API key and cache identity information
-        self.identity = self._validate_session()
+        self.identity = {}
+        if validate:
+            self.identity = self._validate_session()
 
     def _request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
         """Perform an HTTP request against the Modexia API and return JSON.
@@ -115,8 +127,12 @@ class ModexiaClient:
                 raise ModexiaAuthError(f"Unauthorized: {response.text}")
             
             if response.status_code >= 400 and response.status_code != 402:
-                try: err = response.json().get('error', response.text)
-                except: err = response.text
+                try: 
+                    err = response.json().get('error', response.text)
+                except Exception: 
+                    # Truncate HTML/plain-text to avoid large exception strings
+                    excerpt = response.text[:512]
+                    err = f"HTTP {response.status_code} at {url}: {excerpt}"
                 raise ModexiaPaymentError(err)
             
             # Return the dictionary, not the response object
@@ -146,6 +162,10 @@ class ModexiaClient:
 
         data = self._validate_session()
         return data.get("balance", "0")
+
+    def get_balance(self) -> str:
+        """Alias for `retrieve_balance()`."""
+        return self.retrieve_balance()
 
     def transfer(self, recipient: str, amount: float, idempotency_key: Optional[str] = None, wait: bool = True) -> Dict[str, Any]:
         """Create a payment from the authenticated agent to `recipient`.
